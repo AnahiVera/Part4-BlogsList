@@ -5,11 +5,26 @@ const listHelper = require('../utils/list_helper')
 test('dummy returns one', () => {
   const blogs = []
 
+
   const result = listHelper.dummy(blogs)
   assert.strictEqual(result, 1)
 })
 
-test ('total likes', () => {
+
+describe('total likes', () => {
+
+  const emtyList = []
+
+  const listWithOneBlog = [
+    {
+      _id: '5a422aa71b54a676234d17f8',
+      title: 'Go To Statement Considered Harmful',
+      author: 'Edsger W. Dijkstra',
+      url: 'https://homepages.cwi.nl/~storm/teaching/reader/Dijkstra68.pdf',
+      likes: 5,
+      __v: 0
+    }
+  ]
   const blogs = [
     {
       _id: "5a422a851b54a676234d17f7",
@@ -58,10 +73,53 @@ test ('total likes', () => {
       url: "http://blog.cleancoder.com/uncle-bob/2016/05/01/TypeWars.html",
       likes: 2,
       __v: 0
-    }  
+    }
   ]
-  const result = listHelper.totalLikes(blogs)
-  
-  assert.strictEqual(result, 36)
-  
+
+  test('when list has multiple blogs, equals the likes of all blogs', () => {
+    const result = listHelper.totalLikes(blogs)
+
+    assert.strictEqual(result, 36)
+  })
+
+  test('when list has only one blog, equals the likes of that', () => {
+    const result = listHelper.totalLikes(listWithOneBlog)
+    assert.strictEqual(result, 5)
+  })
+
+  test('when list is empty, equals 0', () => {
+    const result = listHelper.totalLikes(emtyList)
+    assert.strictEqual(result, 0)
+  })
 })
+
+describe('favorite blog', () => {
+  const blogs = [
+    {
+      title: "React patterns",
+      author: "Michael Chan",
+      likes: 7,
+
+    },
+    {
+      title: "Go To Statement Considered Harmful",
+      author: "Edsger W. Dijkstra",
+      likes: 5,
+
+    },
+    {
+      title: "Canonical string reduction",
+      author: "Edsger W. Dijkstra",
+      likes: 12,
+    }]
+
+  test('returns the blog with most likes', () => {
+    const result = listHelper.favoriteBlog(blogs)
+    assert.deepStrictEqual(result,
+      { title: "Canonical string reduction", author: "Edsger W. Dijkstra", likes: 12 })
+  })
+
+})
+
+
+
