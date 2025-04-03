@@ -36,9 +36,26 @@ blogListsRouter.post('/', async (request, response) => {
         const savedBlog = await blog.save()
         response.status(201).json(savedBlog)
     }
+})
 
 
+blogListsRouter.patch('/:id', async (request, response) => {
+    const id = request.params.id
+    const body = request.body
 
+    const blog = {
+        title: body.title,
+        author: body.author,
+        url: body.url,
+        likes: body.likes,
+    }
+
+   const updatedBlog= await Blog.findByIdAndUpdate(id, blog, { new: true })
+    if (updatedBlog) {
+        response.json(updatedBlog)
+    } else {
+        response.status(404).end()
+    }
 })
 
 blogListsRouter.delete('/:id', async (request, response) => {
