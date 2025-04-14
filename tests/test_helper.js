@@ -34,6 +34,23 @@ const usersInDb = async () => {
     return users.map(user => user.toJSON())
 }
 
+const createTestUser = async (api) => {
+    await User.deleteMany({}) // Clear the users collection before creating a test user
+  
+    const testUser = {
+      username: 'testuser',
+      name: 'Test User',
+      password: 'testpassword',
+    }
+  
+    await api
+      .post('/api/users')
+      .send(testUser)
+      .expect(201) // Ensure the user is created successfully
+  
+    return testUser
+  }
+
 module.exports = {
-    initialBlogs, nonExistingId, blogsInDb, usersInDb
+    initialBlogs, nonExistingId, blogsInDb, usersInDb, createTestUser
 }

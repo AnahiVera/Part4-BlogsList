@@ -3,6 +3,9 @@ const bcrypt = require('bcrypt')
 const loginRouter = require('express').Router()
 const User = require('../models/user')
 
+//Login user with token
+//Cuanto más corto sea el tiempo de caducidad, más segura será la solución.
+
 loginRouter.post('/', async (request, response) => {
   const { username, password } = request.body
 
@@ -22,7 +25,7 @@ loginRouter.post('/', async (request, response) => {
     id: user._id,
   }
 
-  const token = jwt.sign(userForToken, process.env.SECRET)
+  const token = jwt.sign(userForToken, process.env.SECRET, { expiresIn: 60*60*24*7 }) // 1 week
 
   response
     .status(200)
