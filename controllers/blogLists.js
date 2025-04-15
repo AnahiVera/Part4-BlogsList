@@ -2,16 +2,11 @@ const blogListsRouter = require('express').Router()
 const jwt = require('jsonwebtoken')
 const Blog = require('../models/blogList')
 const User = require('../models/user')
+const middleware = require('../utils/middleware') // en vez de en APP solo a rutas especificas, si lo agrego en app.js no hace falta agregarlo en cada ruta
+
 
 //ROUTES
 
-const getTokenFrom = request => {
-    const authorization = request.get('authorization')
-    if (authorization && authorization.startsWith('Bearer ')) {
-        return authorization.replace('Bearer ', '')
-    }
-    return null
-}
 
 blogListsRouter.get('/', async (request, response) => {
     const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
@@ -30,14 +25,13 @@ blogListsRouter.get('/:id', async (request, response, next) => {
 })
 
 
-blogListsRouter.post('/', async (request, response) => {
+blogListsRouter.post('/',middleware.userExtractor,  async (request, response) => {
     const body = request.body
+    const user = request.user
 
-    const decodedToken = jwt.verify(getTokenFrom(request), process.env.SECRET)
-    if (!decodedToken.id) {
-        return response.status(401).json({ error: 'token invalid' })
+    if (!body.title || !body.url) {
+        return response.status(400).json({ error: 'title or url missing' })
     }
-    const user = await User.findById(decodedToken.id)
 
     const blog = new Blog({
         title: body.title,
@@ -46,21 +40,32 @@ blogListsRouter.post('/', async (request, response) => {
         likes: body.likes || 0,
         user: user.id
     })
-    if (!body.title || !body.url) {
-        return response.status(400).json({ error: 'title or url missing' })
-    } else {
-        const savedBlog = await blog.save()
-        user.blogs = user.blogs.concat(savedBlog._id)
-        await user.save()
 
-        response.status(201).json(savedBlog)
-    }
+
+    const savedBlog = await blog.save()
+
+    user.blogs = user.blogs.concat(savedBlog._id)
+    await user.save()
+
+    response.status(201).json(savedBlog)
 })
 
 
-blogListsRouter.patch('/:id', async (request, response) => {
+blogListsRouter.patch('/:id',middleware.userExtractor, async (request, response) => {
     const id = request.params.id
     const body = request.body
+    const user = request.user
+
+    const blogToUpdate = await Blog.findById(id)
+    if (!blogToUpdate) {
+      return response.status(404).json({ error: 'blog not found' })
+    }
+
+    if (blogToUpdate.user.toString() !== user._id.toString()) {
+        return response.status(403).json({ 
+          error: 'only the creator can update this blog' 
+        })
+      }
 
     const blog = {
         title: body.title,
@@ -73,11 +78,22 @@ blogListsRouter.patch('/:id', async (request, response) => {
     if (updatedBlog) {
         response.json(updatedBlog)
     } else {
-        response.status(404).end()
+        response.status(404).json({ error: 'blog not found' })
     }
 })
 
-blogListsRouter.delete('/:id', async (request, response) => {
+blogListsRouter.delete('/:id',middleware.userExtractor, async (request, response) => {
+
+    const user = request.user
+    const blog = await Blog.findById(request.params.id)
+
+    if (!blog) {
+        return response.status(404).json({ error: 'blog not found' })
+    }
+    if (blog.user.toString() !== user.id.toString()) {
+        return response.status(403).json({ error: 'only the creator can delete this blog' })
+    }
+
     const id = request.params.id
     await Blog.findByIdAndDelete(id)
     response.status(204).end()

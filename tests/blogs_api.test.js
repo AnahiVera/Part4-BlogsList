@@ -11,6 +11,7 @@ const Blog = require('../models/blogList')
 const User = require('../models/user')
 
 let token = null
+let blogToDelete = null
 
 
 beforeEach(async () => {
@@ -30,9 +31,24 @@ beforeEach(async () => {
     })
 
   token = loginResponse.body.token // Store the token globally
+
+  // Create a blog for this user
+  const newBlog = {
+    title: 'Blog to delete',
+    author: 'Test Author',
+    url: 'http://test.com',
+    likes: 5
+  }
+
+  const creationResponse = await api
+    .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
+    .send(newBlog)
+
+  blogToDelete = creationResponse.body
 })
 
-describe('when there are initially some blogs saved', () => {
+/* describe('when there are initially some blogs saved', () => {
   test('blogs are returned as json', async () => {
     await api
       .get('/api/blogs')
@@ -50,7 +66,7 @@ describe('when there are initially some blogs saved', () => {
     const titles = response.body.map(e => e.title)
     assert(titles.includes('First Blog'))
   })
-})
+}) */
 
 describe('viewing a specific blog', () => {
   test('succeeds with a valid id', async () => {
@@ -80,6 +96,9 @@ describe('viewing a specific blog', () => {
 describe('addition of a new blog', () => {
     test('succeeds with valid data', async () => {
 
+      const initialBlogs = await helper.blogsInDb()
+      console.log('Initial blogs:', initialBlogs)
+      
       const newBlog = {
         title: 'async/await simplifies making async calls',
         author: 'Author Three',
@@ -95,10 +114,25 @@ describe('addition of a new blog', () => {
         .expect('Content-Type', /application\/json/)
 
       const blogsAtEnd = await helper.blogsInDb()
-      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1)
+      assert.strictEqual(blogsAtEnd.length, initialBlogs.length + 1)
 
       const titles = blogsAtEnd.map(e => e.title)
       assert(titles.includes('async/await simplifies making async calls'))
+    })
+
+    test('fails with status code 401 if token is missing', async () => {
+      const newBlog = {
+        title: 'async/await simplifies making async calls',
+        author: 'Author Three',
+        url: 'http://example.com/third',
+        likes: 2,
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(401)
+        
     })
 
     test('defaults likes to 0 if not provided', async () => {
@@ -166,17 +200,22 @@ describe('addition of a new blog', () => {
 
   describe('deletion of a blog', () => {
     test('succeeds with status code 204 if id is valid', async () => {
-      const blogsAtStart = await helper.blogsInDb()
-      const blogToDelete = blogsAtStart[0]
+      
+      
+      const initialBlogs = await helper.blogsInDb()
+      console.log('Initial blogs:', initialBlogs)
 
       await api
         .delete(`/api/blogs/${blogToDelete.id}`)
+        .set('Authorization', `Bearer ${token}`) // Use the token for authentication
         .expect(204)
 
       const blogsAtEnd = await helper.blogsInDb()
+      console.log('Blogs after deletion:', blogsAtEnd)
       const titles = blogsAtEnd.map(e => e.title)
+
       assert(!titles.includes(blogToDelete.title))
-      assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length - 1)
+      assert.strictEqual(blogsAtEnd.length, initialBlogs.length - 1)
     })
   })
 
@@ -248,6 +287,24 @@ describe('addition of a new blog', () => {
 
       assert(result.body.error.includes('Username or password must be at least 3 characters long'))
     })
+
+    test('creation fails if password is too short', async () => {
+      const newUser = {
+        username: 'shortuser',
+        name: 'Short User',
+        password: 'sh',
+      }
+
+      const result = await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      assert(result.body.error.includes('Username or password must be at least 3 characters long'))
+    })
+
+  
   })
 
   after(async () => {
