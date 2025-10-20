@@ -51,6 +51,39 @@ blogListsRouter.post('/',middleware.userExtractor,  async (request, response) =>
 })
 
 
+blogListsRouter.put('/:id', middleware.userExtractor, async (request, response) => {
+    const id = request.params.id
+    const body = request.body
+    const user = request.user
+
+    console.log('data received for update:', body)
+
+    const blogToUpdate = await Blog.findById(id)
+    if (!blogToUpdate) {
+      return response.status(404).json({ error: 'blog not found' })
+    }
+
+    if (blogToUpdate.user.toString() !== user._id.toString()) {
+        return response.status(403).json({ 
+          error: 'only the creator can update this blog' 
+        })
+      }
+
+    const blog = {
+        title: body.title,
+        author: body.author,
+        url: body.url,
+        likes: body.likes,
+    }
+
+    const updatedBlog = await Blog.findByIdAndUpdate(id, blog, { new: true })
+    if (updatedBlog) {
+        response.json(updatedBlog)
+    } else {
+        response.status(404).json({ error: 'blog not found' })
+    }
+})
+
 blogListsRouter.patch('/:id',middleware.userExtractor, async (request, response) => {
     const id = request.params.id
     const body = request.body
