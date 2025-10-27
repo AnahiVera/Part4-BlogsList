@@ -31,6 +31,16 @@ app.use(middleware.tokenExtractor)
 app.use('/api/blogs', blogListsRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/login', loginRouter)
+
+// cargar rutas de testing solo si estamos en entorno testing 
+if (process.env.NODE_ENV === 'test') {
+  const testingRouter = require('./controllers/testing')
+  app.use('/api/testing', testingRouter)
+
+  console.log('Testing router loaded')
+}
+
+
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
 

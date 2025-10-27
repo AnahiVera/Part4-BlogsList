@@ -29,6 +29,11 @@ blogListsRouter.post('/',middleware.userExtractor,  async (request, response) =>
     const body = request.body
     const user = request.user
 
+     // Verificar que el usuario existe
+    if (!user) {
+      return response.status(401).json({ error: 'user authentication required' })
+    }
+
     if (!body.title || !body.url) {
         return response.status(400).json({ error: 'title or url missing' })
     }
